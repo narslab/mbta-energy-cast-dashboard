@@ -20,6 +20,7 @@ st.set_page_config(layout="wide")
 st.title("MBTA EnergyCast Dashboard")
 # st.write("")
 st.markdown("<p style='font-size: 18px; font-weight: bold;'>A energy forecasting tool for the Massachusetts Bay Transportation Authority urban rail transit system (Boston T)</p>", unsafe_allow_html=True)
+st.markdown("<p style='font-size: 25px; font-weight: bold;'>About</p>", unsafe_allow_html=True)
 st.markdown(
     """
     <p style="font-size: 18px; margin-top: 20px;">
@@ -30,13 +31,16 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-# mitigate the button
+# Mitigate the button
 st.markdown(
     """
     <style>
     .stButton > button {
-        font-size: 20px;
+        font-size: 30px;
         padding: 20px 40px;
+        color: red;
+        border-radius: 15px; 
+        float: right;
     }
     </style>
     """,
@@ -91,6 +95,9 @@ with col1:
         # Store the values in the metrics dictionary
         metrics[line] = {'Num_trips': num_trips, 'Dist': distance, 'Avg_speed': speed}
 
+    # Prediction button
+    st.button("Run Model")
+
     # Text before the logos
     st.markdown(
         """
@@ -105,7 +112,7 @@ with col1:
         <ul style="font-size: 15px;">
             <li>Lead Researcher and Developer: Zhuo Han (NARS Lab, UMass)</li>
             <li>Co-Principal Investigators: Dr. Eleni Christofa and Dr. Eric Gonzales (UMass)</li>
-            <li>Principal Investigator: Dr. Jimi Oke (NARS Lab, UMass)</li>
+            <li>Principal Investigator: <a href="https://people.umass.edu/jboke/" target="_blank">Dr. Jimi Oke</a> (NARS Lab, UMass)</li>
             <li>Project Champion: Sean Donaghy (MBTA)</li>
             <li>Project Manager: Michael Flanary (MassDOT)</li>
             <li>Administrative Support: Kimberley Foster, Matt Mann, Michelle Clark (UMTC) and Anil S. Gurcan (MassDOT)</li>
@@ -146,109 +153,105 @@ with col1:
             col.image(image_path, width=image_width)
 
 with col2:
-    # Prediction button
-    predict_button = st.button("Predict")
-    # Run predictions only when the button is clicked
-    if predict_button:
-        # Data generation process
-        estimate_dist['parameters'] = estimate_dist['parameters'].apply(ast.literal_eval)
-        def generate_data(dist_name, params, size=90):
-            dist = getattr(stats, dist_name)
-            return dist.rvs(size=size, **params)
-        generated_data = {'route_id': [], 'metric': [], 'generated_values': []}
-        for _, row in estimate_dist.iterrows():
-            route_id = row['route_id']
-            metric = row['metric']
-            dist_name = row['distribution']
-            params = row['parameters']
-            data = generate_data(dist_name, params)
-            generated_data['route_id'].append(route_id)
-            generated_data['metric'].append(metric)
-            generated_data['generated_values'].append(data)
-        generated_data_df = pd.DataFrame(generated_data)
+    # Data generation process
+    estimate_dist['parameters'] = estimate_dist['parameters'].apply(ast.literal_eval)
+    def generate_data(dist_name, params, size=90):
+        dist = getattr(stats, dist_name)
+        return dist.rvs(size=size, **params)
+    generated_data = {'route_id': [], 'metric': [], 'generated_values': []}
+    for _, row in estimate_dist.iterrows():
+        route_id = row['route_id']
+        metric = row['metric']
+        dist_name = row['distribution']
+        params = row['parameters']
+        data = generate_data(dist_name, params)
+        generated_data['route_id'].append(route_id)
+        generated_data['metric'].append(metric)
+        generated_data['generated_values'].append(data)
+    generated_data_df = pd.DataFrame(generated_data)
 
-        # Update planning variables based on generated data
-        planning_var = pd.DataFrame(metrics).T.reset_index()
-        planning_var.columns = ['Line', 'Num_trips', 'Dist', 'Avg_speed']
-        planning_var = pd.concat([planning_var] * 90, ignore_index=True)
+    # Update planning variables based on generated data
+    planning_var = pd.DataFrame(metrics).T.reset_index()
+    planning_var.columns = ['Line', 'Num_trips', 'Dist', 'Avg_speed']
+    planning_var = pd.concat([planning_var] * 90, ignore_index=True)
 
-        metric_to_column = {'trip_diff': 'Num_trips', 'dist_diff': 'Dist', 'avg_speed_diff': 'Avg_speed'}
-        for _, row in generated_data_df.iterrows():
-            line = row['route_id']
-            metric = row['metric']
-            generated_values = row['generated_values']
-            column = metric_to_column[metric]
-            line_mask = planning_var['Line'] == line
-            planning_var.loc[line_mask, column] += generated_values[:line_mask.sum()]
+    metric_to_column = {'trip_diff': 'Num_trips', 'dist_diff': 'Dist', 'avg_speed_diff': 'Avg_speed'}
+    for _, row in generated_data_df.iterrows():
+        line = row['route_id']
+        metric = row['metric']
+        generated_values = row['generated_values']
+        column = metric_to_column[metric]
+        line_mask = planning_var['Line'] == line
+        planning_var.loc[line_mask, column] += generated_values[:line_mask.sum()]
 
-        planning_var_reshaped = planning_var.pivot_table(index=planning_var.index // 5, columns='Line', values=['Num_trips', 'Dist', 'Avg_speed']).reset_index(drop=True)
-        planning_var_reshaped.columns = [f"{metric}_{line}" for metric, line in planning_var_reshaped.columns]
+    planning_var_reshaped = planning_var.pivot_table(index=planning_var.index // 5, columns='Line', values=['Num_trips', 'Dist', 'Avg_speed']).reset_index(drop=True)
+    planning_var_reshaped.columns = [f"{metric}_{line}" for metric, line in planning_var_reshaped.columns]
 
-        # Combine data for model input
-        combined_data = pd.concat([planning_var_reshaped.reset_index(drop=True), df_test.reset_index(drop=True)], axis=1)
+    # Combine data for model input
+    combined_data = pd.concat([planning_var_reshaped.reset_index(drop=True), df_test.reset_index(drop=True)], axis=1)
 
-        # Preprocess data for model input
-        seq_data = combined_data[['Energy', 'TAVG']]
-        non_seq_data = combined_data.drop(['Energy', 'TAVG'], axis=1)
-        non_seq_data = non_seq_data.loc[:, non_seq_data.columns != 'Unnamed: 0']
+    # Preprocess data for model input
+    seq_data = combined_data[['Energy', 'TAVG']]
+    non_seq_data = combined_data.drop(['Energy', 'TAVG'], axis=1)
+    non_seq_data = non_seq_data.loc[:, non_seq_data.columns != 'Unnamed: 0']
 
-        seq_scaler = StandardScaler()
-        non_seq_scaler = StandardScaler()
-        seq_data_scaled = seq_scaler.fit_transform(seq_data)
-        non_seq_data_scaled = non_seq_scaler.fit_transform(non_seq_data)
+    seq_scaler = StandardScaler()
+    non_seq_scaler = StandardScaler()
+    seq_data_scaled = seq_scaler.fit_transform(seq_data)
+    non_seq_data_scaled = non_seq_scaler.fit_transform(non_seq_data)
 
-        # Convert sequential data into sequences of 10 time steps
-        time_steps = 10
-        seq_input = np.array([seq_data_scaled[i:i + time_steps] for i in range(len(seq_data_scaled) - time_steps + 1)])
-        non_seq_input = non_seq_data_scaled[time_steps - 1:]
+    # Convert sequential data into sequences of 10 time steps
+    time_steps = 10
+    seq_input = np.array([seq_data_scaled[i:i + time_steps] for i in range(len(seq_data_scaled) - time_steps + 1)])
+    non_seq_input = non_seq_data_scaled[time_steps - 1:]
 
-        # Make predictions
-        predictions = model.predict([seq_input, non_seq_input])
-        predictions_original_scale = seq_scaler.inverse_transform(predictions)
-        energy_values = predictions_original_scale[:, 0]
-        temp_values = predictions_original_scale[:, 1]
+    # Make predictions
+    predictions = model.predict([seq_input, non_seq_input])
+    predictions_original_scale = seq_scaler.inverse_transform(predictions)
+    energy_values = predictions_original_scale[:, 0]
+    temp_values = predictions_original_scale[:, 1]
 
-        # First row with the energy and temperature forecast plots
-        st.header("Forecast")
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
-        
-        # Plot for energy forecast
-        ax1.plot(energy_values, marker='o', linestyle='-', color='b')
-        ax1.set_ylabel("Energy (MWh)", fontsize=15)
-        ax1.set_xlabel("Day", fontsize=15)
-        ax1.grid(True)
-        
-        # Plot for temperature forecast
-        ax2.plot(temp_values, marker='o', linestyle='-', color='r')
-        ax2.set_ylabel("Temperature (F)", fontsize=15)
-        ax2.set_xlabel("Day", fontsize=15)
-        ax2.grid(True)
-        
-        # Display the combined figure
-        st.pyplot(fig)
-        # The overall energy
-        overall_energy_consumption = np.sum(energy_values)
+    # First row with the energy and temperature forecast plots
+    st.markdown("<h2 style='text-align: center;'>Forecast</h2>", unsafe_allow_html=True)
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
+    
+    # Plot for energy forecast
+    ax1.plot(energy_values, marker='o', linestyle='-', color='b')
+    ax1.set_ylabel("Energy (MWh)", fontsize=15)
+    ax1.set_xlabel("Day", fontsize=15)
+    ax1.grid(True)
+    
+    # Plot for temperature forecast
+    ax2.plot(temp_values, marker='o', linestyle='-', color='r')
+    ax2.set_ylabel("Temperature (F)", fontsize=15)
+    ax2.set_xlabel("Day", fontsize=15)
+    ax2.grid(True)
+    
+    # Display the combined figure
+    st.pyplot(fig)
+    # The overall energy
+    overall_energy_consumption = np.sum(energy_values)
 
-        # Display the total energy consumption in a single line
-        st.markdown(
-            f"<p style='font-size: 20px; font-weight: bold;'>Overall Energy Consumption (MWh): "
-            f"<span style='font-weight: normal;'>{overall_energy_consumption:.2f}</span></p>",
-            unsafe_allow_html=True
-        )
-        # Right side: Statistics table for daily energy based on predictions
-        st.header("Daily Energy Forecast Statistics")
-        daily_energy_stats = {
-            'Statistic': ['Average', 'Median', 'Min', 'Max'],
-            'Energy (MWh)': [
-                round(np.mean(energy_values), 2),
-                round(np.median(energy_values), 2),
-                round(np.min(energy_values), 2),
-                round(np.max(energy_values), 2)
-            ]
-        }
-        energy_stats_df = pd.DataFrame(daily_energy_stats)
-        energy_stats_df['Energy (MWh)'] = energy_stats_df['Energy (MWh)'].map("{:.2f}".format)
+    # Display the total energy consumption in a single line
+    st.markdown(
+        f"<p style='font-size: 20px; font-weight: bold;'>Overall Energy Consumption (MWh): "
+        f"<span style='font-weight: normal;'>{overall_energy_consumption:.2f}</span></p>",
+        unsafe_allow_html=True
+    )
+    # Right side: Statistics table for daily energy based on predictions
+    st.header("Daily Energy Forecast Statistics")
+    daily_energy_stats = {
+        'Statistic': ['Average', 'Median', 'Min', 'Max'],
+        'Energy (MWh)': [
+            round(np.mean(energy_values), 2),
+            round(np.median(energy_values), 2),
+            round(np.min(energy_values), 2),
+            round(np.max(energy_values), 2)
+        ]
+    }
+    energy_stats_df = pd.DataFrame(daily_energy_stats)
+    energy_stats_df['Energy (MWh)'] = energy_stats_df['Energy (MWh)'].map("{:.2f}".format)
 
-        st.table(energy_stats_df)
+    st.table(energy_stats_df)
 
 
