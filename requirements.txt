@@ -5,4 +5,4 @@ tensorflow
 scipy
 matplotlib
 numpy
-sklearn
+scikit-learn
