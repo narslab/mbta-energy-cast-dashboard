@@ -1,0 +1,8 @@
+streamlit
+pandas
+numpy
+tensorflow==2.11.0
+scipy
+matplotlib
+numpy
+sklearn
