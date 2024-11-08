@@ -5,4 +5,4 @@ tensorflow==2.11.0
 scipy
 matplotlib
 numpy
-sklearn
+scikit-learn
