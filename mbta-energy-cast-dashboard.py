@@ -100,30 +100,30 @@ with col1:
 
     # Text before the logos
     st.markdown(
-        """
-        <p style="font-size: 16px; margin-top: 20px;">
-        This tool was developed by the Networks for Accessibility, Resilience and Sustainability Laboratory (NARS Lab) at 
-        the University of Massachusetts Amherst, in partnership with the Massachusetts Bay Transportation Authority (MBTA). 
-        The project was funded by the Massachusetts Department of Transportation (MassDOT), and the grant was administered 
-        by the University of Massachusetts Transportation Center (UMTC).
-        </p>
-        
-        <p style="font-size: 16px; font-weight: bold; margin-top: 20px;">Credits:</p>
-        <ul style="font-size: 15px;">
-            <li>Lead Researcher and Developer: Zhuo Han (NARS Lab, UMass)</li>
-            <li>Co-Principal Investigators: Dr. Eleni Christofa and Dr. Eric Gonzales (UMass)</li>
-            <li>Principal Investigator: <a href="https://people.umass.edu/jboke/" target="_blank">Dr. Jimi Oke</a> (NARS Lab, UMass)</li>
-            <li>Project Champion: Sean Donaghy (MBTA)</li>
-            <li>Project Manager: Michael Flanary (MassDOT)</li>
-            <li>Administrative Support: Kimberley Foster, Matt Mann, Michelle Clark (UMTC) and Anil S. Gurcan (MassDOT)</li>
-        </ul>
+    """
+    <p style="font-size: 16px; margin-top: 20px;">
+    This tool was developed by the <a href="https://narslab.org/" target="_blank">Networks for Accessibility, Resilience and Sustainability Laboratory (NARS Lab)</a> at 
+    the University of Massachusetts Amherst, in partnership with the <a href="https://www.mbta.com/" target="_blank">Massachusetts Bay Transportation Authority (MBTA)</a>. 
+    The project was funded by the <a href="https://www.mass.gov/orgs/massachusetts-department-of-transportation" target="_blank">Massachusetts Department of Transportation (MassDOT)</a>, 
+    and the grant was administered by the <a href="https://www.umasstransportationcenter.org/umtc/default.asp" target="_blank">University of Massachusetts Transportation Center (UMTC)</a>.
+    </p>
+    
+    <p style="font-size: 16px; font-weight: bold; margin-top: 20px;">Credits:</p>
+    <ul style="font-size: 15px;">
+        <li>Lead Researcher and Developer: Zhuo Han (NARS Lab, UMass)</li>
+        <li>Co-Principal Investigators: Dr. Eleni Christofa and Dr. Eric Gonzales (UMass)</li>
+        <li>Principal Investigator: <a href="https://people.umass.edu/jboke/" target="_blank">Dr. Jimi Oke</a> (NARS Lab, UMass)</li>
+        <li>Project Champion: Sean Donaghy (MBTA)</li>
+        <li>Project Manager: Michael Flanary (MassDOT)</li>
+        <li>Administrative Support: Kimberley Foster, Matt Mann, Michelle Clark (UMTC) and Anil S. Gurcan (MassDOT)</li>
+    </ul>
 
-        <p style="font-size: 15px; font-weight: bold;">
-            <a href="https://github.com/narslab/mbta-energy-cast-dashboard.git" target="_blank">GitHub Repository: MBTA EnergyCast Dashboard</a>
-        </p>
-        """, 
-        unsafe_allow_html=True
-    )
+    <p style="font-size: 15px; font-weight: bold;">
+        <a href="https://github.com/narslab/mbta-energy-cast-dashboard.git" target="_blank">GitHub Repository: MBTA EnergyCast Dashboard</a>
+    </p>
+    """, 
+    unsafe_allow_html=True
+)
 
     # Display images from the 'logo' folder below the inputs
     logo_path = "logo"  # Path to the 'logo' folder
@@ -201,7 +201,7 @@ with col2:
     non_seq_data_scaled = non_seq_scaler.fit_transform(non_seq_data)
 
     # Convert sequential data into sequences of 10 time steps
-    time_steps = 10
+    time_steps = 1
     seq_input = np.array([seq_data_scaled[i:i + time_steps] for i in range(len(seq_data_scaled) - time_steps + 1)])
     non_seq_input = non_seq_data_scaled[time_steps - 1:]
 
