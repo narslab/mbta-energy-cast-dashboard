@@ -201,7 +201,7 @@ with col2:
     non_seq_data_scaled = non_seq_scaler.fit_transform(non_seq_data)
 
     # Convert sequential data into sequences of 10 time steps
-    time_steps = 1
+    time_steps = 10
     seq_input = np.array([seq_data_scaled[i:i + time_steps] for i in range(len(seq_data_scaled) - time_steps + 1)])
     non_seq_input = non_seq_data_scaled[time_steps - 1:]
 
